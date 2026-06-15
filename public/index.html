@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍔 Food Delivery — DB Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0f172a;
+    --surface:  #1e293b;
+    --surface2: #334155;
+    --border:   #475569;
+    --text:     #f1f5f9;
+    --muted:    #94a3b8;
+    --accent:   #3b82f6;
+    --green:    #22c55e;
+    --yellow:   #eab308;
+    --red:      #ef4444;
+    --purple:   #a855f7;
+    --orange:   #f97316;
+  }
+
+  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 100;
+  }
+  .logo { padding: 20px 16px; font-size: 18px; font-weight: 700; border-bottom: 1px solid var(--border); }
+  .logo span { color: var(--accent); }
+  nav { flex: 1; padding: 8px; }
+  nav a {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 8px; text-decoration: none; color: var(--muted);
+    font-size: 14px; margin-bottom: 2px; cursor: pointer; transition: all .15s;
+  }
+  nav a:hover, nav a.active { background: var(--surface2); color: var(--text); }
+  nav a.active { color: var(--accent); }
+
+  /* MAIN */
+  .main { margin-left: 220px; padding: 24px; }
+
+  /* HEADER */
+  .page-header { margin-bottom: 24px; }
+  .page-header h1 { font-size: 22px; font-weight: 700; }
+  .page-header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* STAT CARDS */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; }
+  .stat-card .sub { font-size: 12px; color: var(--muted); }
+
+  /* TABLE */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .card-header h2 { font-size: 15px; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 10px 16px; text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; background: var(--surface2); }
+  td { padding: 10px 16px; border-top: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* BADGES */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-pending   { background: rgba(234,179,8,.15);  color: var(--yellow); }
+  .badge-accepted  { background: rgba(59,130,246,.15); color: var(--accent); }
+  .badge-cooking   { background: rgba(249,115,22,.15); color: var(--orange); }
+  .badge-picked_up { background: rgba(168,85,247,.15); color: var(--purple); }
+  .badge-delivered { background: rgba(34,197,94,.15);  color: var(--green); }
+  .badge-cancelled { background: rgba(239,68,68,.15);  color: var(--red); }
+  .badge-completed { background: rgba(34,197,94,.15);  color: var(--green); }
+  .badge-refunded  { background: rgba(239,68,68,.15);  color: var(--red); }
+  .badge-customer  { background: rgba(59,130,246,.15); color: var(--accent); }
+  .badge-courier   { background: rgba(168,85,247,.15); color: var(--purple); }
+  .badge-owner     { background: rgba(249,115,22,.15); color: var(--orange); }
+  .badge-admin     { background: rgba(239,68,68,.15);  color: var(--red); }
+
+  /* STARS */
+  .stars { color: var(--yellow); font-size: 13px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; }
+  .btn-green  { background: rgba(34,197,94,.2);  color: var(--green);  }
+  .btn-yellow { background: rgba(234,179,8,.2);  color: var(--yellow); }
+  .btn-red    { background: rgba(239,68,68,.2);  color: var(--red);    }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; color: var(--muted); }
+  input, select, textarea {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 13px; width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .form-actions { padding: 0 20px 20px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; padding: 16px 20px 0; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 16px; font-size: 13px; cursor: pointer; border-radius: 8px 8px 0 0;
+    color: var(--muted); background: none; border: none; transition: all .15s;
+  }
+  .tab.active { color: var(--accent); background: var(--surface2); }
+
+  /* SCHEMA EXPLORER */
+  .schema-table { margin-bottom: 16px; }
+  .schema-table-name {
+    padding: 10px 16px; background: var(--surface2); font-weight: 600;
+    font-size: 13px; border-radius: 8px 8px 0 0; border: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .schema-table-name .count { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .schema-cols { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; overflow: hidden; }
+
+  /* TIMELINE */
+  .timeline { padding: 0 16px; }
+  .timeline-item { display: flex; gap: 12px; padding: 8px 0; font-size: 12px; }
+  .timeline-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .timeline-time { color: var(--muted); white-space: nowrap; }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .filters select { width: auto; }
+  .filters input { width: auto; }
+
+  /* SECTION */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* PRICE */
+  .price { font-weight: 600; font-family: monospace; }
+  .price-green { color: var(--green); }
+  .price-muted { color: var(--muted); font-size: 11px; }
+
+  /* LOADER */
+  .loader { text-align: center; padding: 40px; color: var(--muted); }
+
+  /* SUMMARY ROW */
+  .summary { background: var(--surface2); }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="logo">🍔 <span>FoodDB</span></div>
+  <nav>
+    <a class="active" onclick="show('dashboard')">📊 Dashboard</a>
+    <a onclick="show('orders')">📦 Buyurtmalar</a>
+    <a onclick="show('users')">👤 Foydalanuvchilar</a>
+    <a onclick="show('restaurants')">🏪 Restoranlar</a>
+    <a onclick="show('menu')">🍽️ Menyu</a>
+    <a onclick="show('payments')">💳 To'lovlar</a>
+    <a onclick="show('ratings')">⭐ Reytinglar</a>
+    <a onclick="show('promos')">🎁 Promo kodlar</a>
+    <a onclick="show('schema')">🗄️ Schema</a>
+    <a onclick="show('new-order')">➕ Yangi buyurtma</a>
+  </nav>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="section active">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p>Food Delivery Platform — real-time ko'rinish</p>
+    </div>
+    <div class="stats-grid" id="stats-grid">
+      <div class="loader">Yuklanmoqda...</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>📦 Oxirgi buyurtmalar</h2></div>
+      <div id="recent-orders"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div id="orders" class="section">
+    <div class="page-header"><h1>📦 Buyurtmalar</h1><p>Barcha buyurtmalar va holat tarixi</p></div>
+    <div class="card">
+      <div class="filters">
+        <select id="order-status-filter" onchange="loadOrders()">
+          <option value="">Barcha statuslar</option>
+          <option value="pending">Pending</option>
+          <option value="accepted">Accepted</option>
+          <option value="cooking">Cooking</option>
+          <option value="picked_up">Picked up</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div id="orders-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div id="users" class="section">
+    <div class="page-header"><h1>👤 Foydalanuvchilar</h1></div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Foydalanuvchilar ro'yxati</h2>
+        <button class="btn btn-primary" onclick="document.getElementById('add-user-form').style.display='block'">+ Qo'shish</button>
+      </div>
+      <div id="add-user-form" style="display:none; border-bottom:1px solid var(--border)">
+        <div class="form-grid">
+          <div class="form-group"><label>Ism</label><input id="u-name" placeholder="Ali Valiyev"></div>
+          <div class="form-group"><label>Email</label><input id="u-email" placeholder="ali@mail.uz"></div>
+          <div class="form-group"><label>Telefon</label><input id="u-phone" placeholder="+998901234567"></div>
+          <div class="form-group"><label>Rol</label>
+            <select id="u-role">
+              <option value="customer">Customer</option>
+              <option value="courier">Courier</option>
+              <option value="owner">Owner</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addUser()">Saqlash</button>
+        </div>
+      </div>
+      <div id="users-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- RESTAURANTS -->
+  <div id="restaurants" class="section">
+    <div class="page-header"><h1>🏪 Restoranlar</h1></div>
+    <div class="card">
+      <div class="card-header"><h2>Barcha restoranlar</h2></div>
+      <div id="restaurants-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- MENU -->
+  <div id="menu" class="section">
+    <div class="page-header"><h1>🍽️ Menyu</h1></div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Menu items</h2>
+        <button class="btn btn-primary" onclick="document.getElementById('add-item-form').style.display='block'">+ Qo'shish</button>
+      </div>
+      <div id="add-item-form" style="display:none; border-bottom:1px solid var(--border)">
+        <div class="form-grid">
+          <div class="form-group"><label>Kategoriya ID</label><input id="mi-cat" type="number" placeholder="1"></div>
+          <div class="form-group"><label>Nomi</label><input id="mi-name" placeholder="Osh"></div>
+          <div class="form-group"><label>Narxi (so'm)</label><input id="mi-price" type="number" placeholder="35000"></div>
+          <div class="form-group"><label>Tavsif</label><input id="mi-desc" placeholder="Ixtiyoriy"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addMenuItem()">Saqlash</button>
+        </div>
+      </div>
+      <div id="menu-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- PAYMENTS -->
+  <div id="payments" class="section">
+    <div class="page-header"><h1>💳 To'lovlar</h1></div>
+    <div class="card">
+      <div class="card-header"><h2>To'lovlar tarixi</h2></div>
+      <div id="payments-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- RATINGS -->
+  <div id="ratings" class="section">
+    <div class="page-header"><h1>⭐ Reytinglar</h1></div>
+    <div class="card">
+      <div class="card-header"><h2>Reytinglar</h2></div>
+      <div id="ratings-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- PROMOS -->
+  <div id="promos" class="section">
+    <div class="page-header"><h1>🎁 Promo kodlar</h1></div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Chegirma kodlar</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="promo-check" placeholder="GLOVO10" style="width:140px">
+          <button class="btn btn-primary" onclick="checkPromo()">Tekshirish</button>
+        </div>
+      </div>
+      <div id="promo-check-result" style="padding:0 20px"></div>
+      <div id="promos-table"><div class="loader">Yuklanmoqda...</div></div>
+    </div>
+  </div>
+
+  <!-- SCHEMA -->
+  <div id="schema" class="section">
+    <div class="page-header"><h1>🗄️ Database Schema</h1><p>Barcha jadvallar, ustunlar va munosabatlar</p></div>
+    <div id="schema-content"><div class="loader">Yuklanmoqda...</div></div>
+  </div>
+
+  <!-- NEW ORDER -->
+  <div id="new-order" class="section">
+    <div class="page-header"><h1>➕ Yangi buyurtma</h1></div>
+    <div class="card">
+      <div class="form-grid">
+        <div class="form-group"><label>Mijoz ID</label><input id="no-customer" type="number" value="3"></div>
+        <div class="form-group"><label>Restoran ID</label><input id="no-restaurant" type="number" value="1"></div>
+        <div class="form-group"><label>Taom ID</label><input id="no-item" type="number" value="1"></div>
+        <div class="form-group"><label>Miqdor</label><input id="no-qty" type="number" value="1"></div>
+        <div class="form-group"><label>Promo kod (ixtiyoriy)</label><input id="no-promo" placeholder="GLOVO10"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="placeOrder()">Buyurtma berish</button>
+      </div>
+      <div id="order-result" style="padding:0 20px 20px"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Status yangilash</h2></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Buyurtma ID</label><input id="su-order" type="number" value="1"></div>
+        <div class="form-group"><label>Yangi status</label>
+          <select id="su-status">
+            <option value="accepted">accepted</option>
+            <option value="cooking">cooking</option>
+            <option value="picked_up">picked_up</option>
+            <option value="delivered">delivered</option>
+            <option value="cancelled">cancelled</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Kuryer ID (ixtiyoriy)</label><input id="su-courier" type="number" placeholder="5"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="updateStatus()">Yangilash</button>
+      </div>
+      <div id="status-result" style="padding:0 20px 20px"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '';
+
+function fmt(n) { return Number(n).toLocaleString('uz-UZ') + ' so\'m'; }
+function badge(status) { return `<span class="badge badge-${status}">${status}</span>`; }
+function stars(n) { return '<span class="stars">' + '★'.repeat(n) + '☆'.repeat(5-n) + '</span>'; }
+function timeAgo(dt) {
+  const d = new Date(dt.replace(' ','T') + (dt.includes('Z') ? '' : 'Z'));
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return Math.round(diff) + 's oldin';
+  if (diff < 3600) return Math.round(diff/60) + ' daq oldin';
+  if (diff < 86400) return Math.round(diff/3600) + ' soat oldin';
+  return Math.round(diff/86400) + ' kun oldin';
+}
+
+// Show section
+const navLinks = document.querySelectorAll('nav a');
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  navLinks.forEach(a => a.classList.remove('active'));
+  event.target.classList.add('active');
+  loaders[id]?.();
+}
+
+const loaders = {
+  dashboard:   loadDashboard,
+  orders:      loadOrders,
+  users:       loadUsers,
+  restaurants: loadRestaurants,
+  menu:        loadMenu,
+  payments:    loadPayments,
+  ratings:     loadRatings,
+  promos:      loadPromos,
+  schema:      loadSchema,
+};
+
+// DASHBOARD
+async function loadDashboard() {
+  const [stats, orders] = await Promise.all([
+    fetch('/api/stats').then(r=>r.json()),
+    fetch('/api/orders').then(r=>r.json()),
+  ]);
+
+  const cards = [
+    { label:'Jami buyurtmalar', value: stats.total_orders, sub: `${stats.delivered_orders} yetkazildi`, color:'var(--accent)' },
+    { label:'Kutayotgan', value: stats.pending_orders, sub:'Pending orders', color:'var(--yellow)' },
+    { label:'Jami daromad', value: fmt(stats.total_revenue), sub:'Yakunlangan to\'lovlar', color:'var(--green)' },
+    { label:'O\'rtacha buyurtma', value: fmt(stats.avg_order_value), sub:`${stats.total_users} foydalanuvchi`, color:'var(--purple)' },
+  ];
+
+  document.getElementById('stats-grid').innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="label">${c.label}</div>
+      <div class="value" style="color:${c.color}">${c.value}</div>
+      <div class="sub">${c.sub}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('recent-orders').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Mijoz</th><th>Restoran</th><th>Status</th><th>Jami</th><th>Vaqt</th></tr></thead>
+      <tbody>${orders.slice(0,8).map(o=>`
+        <tr>
+          <td>#${o.id}</td>
+          <td>${o.customer_name}</td>
+          <td>${o.restaurant_name}</td>
+          <td>${badge(o.status)}</td>
+          <td class="price">${fmt(o.total)}</td>
+          <td style="color:var(--muted)">${timeAgo(o.placed_at)}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>`;
+}
+
+// ORDERS
+async function loadOrders() {
+  const status = document.getElementById('order-status-filter')?.value || '';
+  const url = `/api/orders${status ? '?status='+status : ''}`;
+  const orders = await fetch(url).then(r=>r.json());
+
+  document.getElementById('orders-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Mijoz</th><th>Restoran</th><th>Kuryer</th><th>Status</th><th>Taomlar</th><th>Jami</th><th>Timeline</th></tr></thead>
+      <tbody>${orders.map(o=>`
+        <tr>
+          <td><strong>#${o.id}</strong></td>
+          <td>${o.customer_name}</td>
+          <td>${o.restaurant_name}</td>
+          <td>${o.courier_name || '<span style="color:var(--muted)">—</span>'}</td>
+          <td>${badge(o.status)}</td>
+          <td style="font-size:12px;color:var(--muted)">${o.items.map(i=>`${i.item_name} ×${i.quantity}`).join('<br>')}</td>
+          <td>
+            <div class="price price-green">${fmt(o.total)}</div>
+            ${o.discount_amount>0?`<div class="price-muted">-${fmt(o.discount_amount)} chegirma</div>`:''}
+          </td>
+          <td>
+            <div class="timeline">${o.history.map(h=>`
+              <div class="timeline-item">
+                <div class="timeline-dot" style="background:${statusColor(h.status)}"></div>
+                <div>
+                  <div style="font-size:11px;font-weight:600">${h.status}</div>
+                  <div class="timeline-time">${timeAgo(h.changed_at)}</div>
+                </div>
+              </div>`).join('')}
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function statusColor(s) {
+  return {pending:'#eab308',accepted:'#3b82f6',cooking:'#f97316',picked_up:'#a855f7',delivered:'#22c55e',cancelled:'#ef4444'}[s]||'#94a3b8';
+}
+
+// USERS
+async function loadUsers() {
+  const users = await fetch('/api/users').then(r=>r.json());
+  document.getElementById('users-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Telefon</th><th>Rollar</th><th>Ro'yxatdan o'tgan</th></tr></thead>
+      <tbody>${users.map(u=>`
+        <tr>
+          <td>#${u.id}</td>
+          <td><strong>${u.name}</strong></td>
+          <td style="color:var(--muted)">${u.email}</td>
+          <td style="color:var(--muted)">${u.phone}</td>
+          <td>${(u.roles||'').split(',').map(r=>`<span class="badge badge-${r}">${r}</span>`).join(' ')}</td>
+          <td style="color:var(--muted);font-size:12px">${timeAgo(u.created_at)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function addUser() {
+  const res = await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name: document.getElementById('u-name').value,
+      email: document.getElementById('u-email').value,
+      phone: document.getElementById('u-phone').value,
+      role: document.getElementById('u-role').value,
+    })
+  }).then(r=>r.json());
+  alert(res.message || res.error);
+  loadUsers();
+}
+
+// RESTAURANTS
+async function loadRestaurants() {
+  const rests = await fetch('/api/restaurants').then(r=>r.json());
+  document.getElementById('restaurants-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Nomi</th><th>Egasi</th><th>Manzil</th><th>Reyting</th></tr></thead>
+      <tbody>${rests.map(r=>`
+        <tr>
+          <td>#${r.id}</td>
+          <td><strong>${r.name}</strong></td>
+          <td>${r.owner_name}</td>
+          <td style="color:var(--muted)">${r.address}</td>
+          <td>${r.avg_rating ? stars(Math.round(r.avg_rating)) + ` <span style="color:var(--muted);font-size:12px">(${r.avg_rating})</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// MENU
+async function loadMenu() {
+  const items = await fetch('/api/menu-items').then(r=>r.json());
+  document.getElementById('menu-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Nomi</th><th>Kategoriya</th><th>Restoran</th><th>Narx</th><th>Holat</th></tr></thead>
+      <tbody>${items.map(i=>`
+        <tr>
+          <td>#${i.id}</td>
+          <td><strong>${i.name}</strong>${i.description?`<br><span style="color:var(--muted);font-size:11px">${i.description}</span>`:''}</td>
+          <td>${i.category_name}</td>
+          <td>${i.restaurant_name}</td>
+          <td class="price">${fmt(i.base_price)}</td>
+          <td>${i.is_available ? '<span class="badge badge-delivered">Mavjud</span>' : '<span class="badge badge-cancelled">Yoq</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function addMenuItem() {
+  const res = await fetch('/api/menu-items', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      category_id: document.getElementById('mi-cat').value,
+      name: document.getElementById('mi-name').value,
+      base_price: document.getElementById('mi-price').value,
+      description: document.getElementById('mi-desc').value,
+    })
+  }).then(r=>r.json());
+  alert(res.message || res.error);
+  loadMenu();
+}
+
+// PAYMENTS
+async function loadPayments() {
+  const payments = await fetch('/api/payments').then(r=>r.json());
+  document.getElementById('payments-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Buyurtma</th><th>Mijoz</th><th>Usul</th><th>Jami</th><th>Platforma</th><th>Kuryer</th><th>Restoran</th><th>Status</th></tr></thead>
+      <tbody>${payments.map(p=>`
+        <tr>
+          <td>#${p.id}</td>
+          <td>#${p.order_id}</td>
+          <td>${p.customer_name}</td>
+          <td><span class="badge badge-accepted">${p.method}</span></td>
+          <td class="price">${fmt(p.amount)}</td>
+          <td style="color:var(--purple)">${fmt(p.platform_commission)}</td>
+          <td style="color:var(--accent)">${fmt(p.courier_payout)}</td>
+          <td style="color:var(--green)">${fmt(p.restaurant_payout)}</td>
+          <td>${badge(p.status)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// RATINGS
+async function loadRatings() {
+  const ratings = await fetch('/api/ratings').then(r=>r.json());
+  document.getElementById('ratings-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Buyurtma</th><th>Kim berdi</th><th>Kimga</th><th>Tur</th><th>Baho</th><th>Izoh</th></tr></thead>
+      <tbody>${ratings.map(r=>`
+        <tr>
+          <td>#${r.id}</td>
+          <td>#${r.order_id}</td>
+          <td>${r.rater_name}</td>
+          <td>${r.ratee_name||'—'}</td>
+          <td>${badge(r.target_type)}</td>
+          <td>${stars(r.score)}</td>
+          <td style="color:var(--muted);font-size:12px">${r.comment||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// PROMOS
+async function loadPromos() {
+  const promos = await fetch('/api/promos').then(r=>r.json());
+  document.getElementById('promos-table').innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Kod</th><th>Tur</th><th>Chegirma</th><th>Min buyurtma</th><th>Foydalanish</th><th>Muddat</th></tr></thead>
+      <tbody>${promos.map(p=>`
+        <tr>
+          <td>#${p.id}</td>
+          <td><strong style="color:var(--accent);font-family:monospace">${p.code}</strong></td>
+          <td><span class="badge badge-accepted">${p.discount_type}</span></td>
+          <td class="price" style="color:var(--green)">${p.discount_type==='percent'?p.discount_value+'%':fmt(p.discount_value)}</td>
+          <td>${fmt(p.min_order_amount)}</td>
+          <td>
+            <div style="font-size:12px">${p.used_count} / ${p.max_uses||'∞'}</div>
+            ${p.max_uses?`<div style="height:4px;background:var(--surface2);border-radius:2px;margin-top:4px"><div style="height:4px;width:${Math.min(100,p.used_count/p.max_uses*100)}%;background:var(--accent);border-radius:2px"></div></div>`:''}
+          </td>
+          <td style="color:var(--muted);font-size:12px">${p.expires_at?timeAgo(p.expires_at)+' qoldi':'Cheksiz'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function checkPromo() {
+  const code = document.getElementById('promo-check').value;
+  const res = await fetch('/api/promos/validate/'+code).then(r=>r.json());
+  const el = document.getElementById('promo-check-result');
+  if (res.valid) {
+    const p = res.promo;
+    el.innerHTML = `<div style="padding:12px;margin:12px 0;background:rgba(34,197,94,.1);border-radius:8px;color:var(--green)">
+      ✅ <strong>${p.code}</strong> — ${p.discount_type==='percent'?p.discount_value+'% chegirma':fmt(p.discount_value)+' chegirma'}
+      (${fmt(p.min_order_amount)} dan yuqori buyurtmalarda)
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="padding:12px;margin:12px 0;background:rgba(239,68,68,.1);border-radius:8px;color:var(--red)">❌ ${res.message}</div>`;
+  }
+}
+
+// SCHEMA
+async function loadSchema() {
+  const schema = await fetch('/api/schema').then(r=>r.json());
+  const TYPE_COLORS = { INTEGER:'var(--green)', REAL:'var(--green)', TEXT:'var(--accent)', DATETIME:'var(--purple)', VARCHAR:'var(--accent)' };
+
+  document.getElementById('schema-content').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      ${schema.map(t=>`
+        <div class="schema-table">
+          <div class="schema-table-name">
+            <span>${t.name}</span>
+            <span class="count">${t.rowCount} qator</span>
+          </div>
+          <div class="schema-cols">
+            <table>
+              <thead><tr><th>Ustun</th><th>Type</th><th>PK</th><th>Nullable</th></tr></thead>
+              <tbody>${t.columns.map(c=>`
+                <tr>
+                  <td style="font-family:monospace;font-size:12px;${c.pk?'color:var(--yellow);font-weight:700':''}">${c.pk?'🔑 ':''} ${c.name}</td>
+                  <td style="font-size:11px;color:${TYPE_COLORS[c.type]||'var(--muted)'}">${c.type}</td>
+                  <td>${c.pk?'✔':''}</td>
+                  <td style="color:var(--muted);font-size:11px">${c.notnull?'NOT NULL':''}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+            ${t.fks.length?`<div style="padding:8px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)">
+              🔗 FK: ${t.fks.map(f=>`${f.from} → ${f.table}.${f.to}`).join(', ')}
+            </div>`:''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// NEW ORDER
+async function placeOrder() {
+  const body = {
+    customer_id: +document.getElementById('no-customer').value,
+    restaurant_id: +document.getElementById('no-restaurant').value,
+    items: [{ menu_item_id: +document.getElementById('no-item').value, quantity: +document.getElementById('no-qty').value }],
+    promo_code: document.getElementById('no-promo').value || undefined,
+  };
+  const res = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r=>r.json());
+  const el = document.getElementById('order-result');
+  if (res.id) {
+    el.innerHTML = `<div style="padding:12px;background:rgba(34,197,94,.1);border-radius:8px;color:var(--green)">
+      ✅ Buyurtma #${res.id} qabul qilindi! Jami: ${fmt(res.total)} ${res.discount_amount>0?'(chegirma: '+fmt(res.discount_amount)+')':''}
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="padding:12px;background:rgba(239,68,68,.1);border-radius:8px;color:var(--red)">❌ ${res.error}</div>`;
+  }
+}
+
+async function updateStatus() {
+  const orderId = document.getElementById('su-order').value;
+  const body = {
+    status: document.getElementById('su-status').value,
+    courier_id: document.getElementById('su-courier').value || undefined,
+  };
+  const res = await fetch(`/api/orders/${orderId}/status`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r=>r.json());
+  const el = document.getElementById('status-result');
+  el.innerHTML = `<div style="padding:12px;background:rgba(${res.message?'34,197,94':'239,68,68'},.1);border-radius:8px;color:var(--${res.message?'green':'red'})">
+    ${res.message ? '✅ '+res.message : '❌ '+res.error}
+  </div>`;
+}
+
+// Initial load
+loadDashboard();
+</script>
+</body>
+</html>
